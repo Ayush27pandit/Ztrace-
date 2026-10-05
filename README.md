@@ -1,35 +1,52 @@
 # Ztrace
 
-Durable RCA agent: Jira webhook intake, BullMQ/Redis queue, worker orchestration, reports persisted to PostgreSQL.
+**AI-generated, evidence-backed preliminary root-cause analysis for production bug tickets — before a developer starts investigating.**
 
-Status: Milestone 0+1 scaffold. Shadow mode and Jira publication disabled by default.
+## The problem
 
-## Layout
+Production bug tickets usually arrive with a description and screenshots, but no failing component, code path, recent regression, or next diagnostic step. Developers burn their first hour just gathering context.
 
-- `apps/api` — Fastify HTTP API
-- `apps/worker` — BullMQ worker
-- `src/` — shared core (config, integrations, investigation, persistence, queues)
-- `tests/` — vitest tests
-- `prisma/` — schema and migrations
-- `docs/` — spec and architecture docs
+## What Ztrace does
 
-## Prerequisites
+1. A Jira Cloud webhook delivers a production-bug ticket to Ztrace.
+2. Ztrace re-fetches and normalizes the ticket, checks eligibility, and deduplicates deliveries.
+3. A worker investigates permitted systems — the ticket itself, the GitHub monorepo at the deployed commit, and one configured observability source.
+4. The LLM produces a structured report: observed facts, ranked hypotheses, recent relevant changes, recommended next checks, and explicit evidence gaps.
+5. Every claim must cite a stored evidence item. Weak evidence yields `INSUFFICIENT_EVIDENCE` — never a guessed root cause.
+6. The report is posted back to Jira as a comment (when explicitly enabled; **off by default**).
 
-- Node.js >= 22
-- Docker (for local Postgres/Redis) or hosted equivalents
+## Operating principles
 
-## Setup
+- **Evidence before explanation** — every material claim points to evidence IDs.
+- **Facts and hypotheses are separate.**
+- **Abstain when evidence is insufficient.**
+- **Shadow mode by default** — `RCA_MODE=shadow`, `RCA_PUBLISH_TO_JIRA=false`.
+- **No production writes** — no code changes, no deployments, no production DB queries, no repository script execution.
+
+## Architecture
+
+- **API** (Fastify) — webhook intake, health endpoints
+- **Worker** — asynchronous investigation jobs
+- **Queue** — BullMQ + Redis (Upstash in the prototype)
+- **State** — PostgreSQL + Prisma (source of truth; Postgres, not the queue, owns investigation state)
+- **Integrations** — Jira Cloud REST, read-only GitHub App, observability adapter, optional MongoDB Atlas adapter (disabled until verified), provider-neutral LLM adapter
+- **Sandbox** — repository reproduction runs in a dedicated sandbox provider, never on the app host
+
+Deployment target: one small EC2 instance (API + worker as separate Docker Compose services), Caddy for HTTPS, managed Postgres (Neon), managed Redis (Upstash), GHCR, GitHub Actions, Grafana Cloud. See `docs/Ztrace_Infrastructure_Architecture.md`.
+
+## Docs
+
+- `docs/Ztrace_AI_Coding_Agent_Spec (1).md` — full implementation spec
+- `docs/Ztrace_Infrastructure_Architecture.md` — infrastructure & deployment
+- `docs/superpowers/plans/` — implementation plans
+
+## Develop
 
 ```bash
 npm install
 cp .env.example .env   # fill in DATABASE_URL and REDIS_URL
 docker compose up -d postgres redis
 npx prisma migrate dev
-```
-
-## Develop
-
-```bash
 npm run dev:api
 npm run dev:worker
 ```
@@ -41,6 +58,6 @@ npm run lint   # tsc --noEmit
 npm test
 ```
 
-## Configuration
+## Status
 
-See `.env.example`. Safe defaults: `RCA_MODE=shadow`, `RCA_PUBLISH_TO_JIRA=false`. Never commit real credentials.
+Milestone 0+1 scaffold: repo, config validation, Prisma schema, state machine, investigation repository, queue/worker skeleton, lease sweeper (planned), health endpoints. Jira ingestion lands in Milestone 2. Publication remains disabled.

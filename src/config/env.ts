@@ -10,7 +10,7 @@ const schema = z.object({
     .transform((v) => v === "true"),
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.string().default("info"),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z.enum(["development", "localDevelopment", "test", "production"]).default("development"),
   UPSTASH_REDIS_HOST: z.string().optional(),
   UPSTASH_REDIS_PORT: z.coerce.number().int().positive().default(6379),
   UPSTASH_REDIS_PASSWORD: z.string().optional(),

@@ -1,13 +1,19 @@
-import Fastify from "fastify";
+import express from "express";
+import pino from "pino";
 import { parseEnv } from "../../../src/config/env.js";
 
-const app = Fastify({ logger: true });
+const app = express();
+const logger = pino();
 
-app.get("/health", async () => ({ status: "ok" }));
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
 
-const start = async (): Promise<void> => {
+const start = (): void => {
   const env = parseEnv(process.env);
-  await app.listen({ port: env.PORT, host: "0.0.0.0" });
+  app.listen(env.PORT, "0.0.0.0", () => {
+    logger.info({ port: env.PORT }, "api listening");
+  });
 };
 
-void start();
+start();

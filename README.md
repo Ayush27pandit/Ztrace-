@@ -25,7 +25,7 @@ Production bug tickets usually arrive with a description and screenshots, but no
 
 ## Architecture
 
-- **API** (Fastify) — webhook intake, health endpoints
+- **API** (Express) — webhook intake, health endpoints
 - **Worker** — asynchronous investigation jobs
 - **Queue** — BullMQ + Redis (Upstash in the prototype)
 - **State** — PostgreSQL + Prisma (source of truth; Postgres, not the queue, owns investigation state)

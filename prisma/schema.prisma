@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvestigationStatus {
+  RECEIVED
+  QUEUED
+  RUNNING
+  COLLECTING_EVIDENCE
+  ANALYZING
+  VALIDATING
+  REPORT_READY
+  PUBLISHED
+  INSUFFICIENT_EVIDENCE
+  REVIEW_REQUIRED
+  RETRY_WAIT
+  FAILED
+  CANCELLED
+}
+
+model Investigation {
+  id              String              @id @default(uuid())
+  jiraIssueKey    String
+  issueUpdatedAt  DateTime
+  idempotencyKey  String              @unique
+  status          InvestigationStatus @default(RECEIVED)
+  stage           String              @default("received")
+  attemptCount    Int                 @default(0)
+  repositoryId    String?
+  selectedSha     String?
+  occurredFrom    DateTime?
+  occurredTo      DateTime?
+  leaseOwner      String?
+  leaseExpiresAt  DateTime?
+  heartbeatAt     DateTime?
+  failureCategory String?
+  failureSummary  String?
+  configVersion   String              @default("1.0")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  evidence        Evidence[]
+  reports         Report[]
+  auditEvents     AuditEvent[]
+
+  @@index([jiraIssueKey, createdAt])
+  @@index([status, updatedAt])
+}
+
+model Evidence {
+  id              String        @id @default(uuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id])
+  source          String
+  kind            String
+  title           String
+  summary         String
+  sourceUri       String?
+  occurredAt      DateTime?
+  repoSha         String?
+  path            String?
+  lineStart       Int?
+  lineEnd         Int?
+  contentHash     String
+  redactionStatus String        @default("redacted")
+  reliability     String        @default("unknown")
+  limitations     String?
+
+  @@index([investigationId, source])
+}
+
+model Report {
+  id                        String        @id @default(uuid())
+  investigationId           String
+  investigation             Investigation @relation(fields: [investigationId], references: [id])
+  schemaVersion             String        @default("1.0")
+  reportJson                Json
+  renderedComment           String?
+  validationStatus          String
+  publishedCommentId        String?
+  publishedAt               DateTime?
+  publicationIdempotencyKey String?       @unique
+  provider                  String?
+  model                     String?
+  tokenUsage                Json?
+  createdAt                 DateTime      @default(now())
+}
+
+model AuditEvent {
+  id              String        @id @default(uuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id])
+  actor           String
+  eventType       String
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+}

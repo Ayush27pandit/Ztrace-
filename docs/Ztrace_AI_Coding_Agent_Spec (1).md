@@ -313,7 +313,7 @@ requirement to generate every file in one pass.
 Preferred initial stack:
 
 -   Node.js LTS and TypeScript with strict mode.
--   Fastify for the HTTP API.
+-   Express for the HTTP API.
 -   Zod for environment/config validation and external payload
     validation.
 -   BullMQ and Upstash Redis (Redis-compatible TLS endpoint) for asynchronous jobs.
@@ -1199,7 +1199,7 @@ guessed providers.
 
 ## Milestone 1 --- Durable job foundation
 
--   Scaffold or integrate Fastify/TypeScript service.
+-   Scaffold or integrate Express/TypeScript service.
 -   Add validated configuration, structured logging, health endpoints.
 -   Add PostgreSQL/Prisma models and migrations.
 -   Add Redis/BullMQ queue and worker.

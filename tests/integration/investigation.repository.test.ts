@@ -4,8 +4,8 @@ import { InvestigationRepository } from "../../src/persistence/repositories/inve
 
 const repo = new InvestigationRepository(prisma);
 afterAll(async () => {
-  await prisma.auditEvent.deleteMany();
-  await prisma.investigation.deleteMany();
+  await prisma.auditEvent.deleteMany({ where: { investigation: { idempotencyKey: { startsWith: "k" } } } });
+  await prisma.investigation.deleteMany({ where: { idempotencyKey: { startsWith: "k" } } });
   await prisma.$disconnect();
 });
 

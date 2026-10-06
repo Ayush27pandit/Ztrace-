@@ -16,16 +16,30 @@ Production bug tickets usually arrive with a description and screenshots, but no
 6. The report is posted back to Jira as a comment (when explicitly enabled; **off by default**).
 
 ```mermaid
-flowchart LR
-    Jira[Jira Cloud webhook] --> API[Ztrace API]
-    API --> PG[(PostgreSQL)]
-    API --> Q[BullMQ / Redis]
-    Q --> W[Worker]
-    W --> GH[GitHub monorepo]
-    W --> Obs[Observability]
-    W --> LLM[LLM]
-    W --> PG
-    W --> JiraC[Jira comment]
+flowchart TD
+    J[Jira: bug created/updated] -->|webhook POST /webhooks/jira| A[API: verify signature]
+    A -->|invalid| R1[reject 401]
+    A -->|valid| B[API: re-fetch issue via Jira REST]
+    B --> C{eligible project/type?}
+    C -->|no| R2[record rejected, 200]
+    C -->|yes| D[createOrGet investigation by idempotencyKey]
+    D -->|duplicate| R3[return existing, no new job]
+    D -->|new| E[enqueue RCAJob in BullMQ]
+    E --> F[Worker: BullMQ delivers job]
+    F --> G[acquireLease + RUNNING + heartbeat]
+    G --> H[ticket evidence: summary, comments, attachments]
+    H --> I[code evidence: deployed SHA, routes, commits, PRs]
+    I --> J[operational evidence: logs/metrics window]
+    J --> K[build evidence pack: dedupe, redact, budget]
+    K --> L[LLM: ranked hypotheses + next checks]
+    L --> M{all evidence IDs valid?}
+    M -->|no| N[INSUFFICIENT_EVIDENCE report]
+    M -->|yes| O{RCA_PUBLISH_TO_JIRA?}
+    O -->|false| P[REPORT_READY, no Jira write]
+    O -->|true| Q[post Jira comment once, idempotent marker]
+    N --> P
+    G -.->|crash, lease expires| S[sweeper: RUNNING → RETRY_WAIT]
+    S --> E
 ```
 
 ## Operating principles

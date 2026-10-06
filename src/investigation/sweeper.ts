@@ -25,11 +25,12 @@ export async function sweepStaleLeases(prisma: PrismaClient, now: Date = new Dat
         const current = await tx.investigation.findUniqueOrThrow({ where: { id: inv.id } });
         if (!current.leaseExpiresAt || current.leaseExpiresAt >= now) return;
         assertTransition(current.status, "RETRY_WAIT");
+        const to: InvestigationStatus = "RETRY_WAIT";
         const updated = await tx.investigation.updateMany({
           where: { id: inv.id, leaseExpiresAt: { lt: now } },
           data: {
-            status: "RETRY_WAIT",
-            stage: "retry_wait",
+            status: to,
+            stage: to.toLowerCase(),
             failureCategory: "lease_expired",
             failureSummary: "Lease expired; investigation will be retried",
             leaseOwner: null,
@@ -44,7 +45,7 @@ export async function sweepStaleLeases(prisma: PrismaClient, now: Date = new Dat
             investigationId: inv.id,
             actor: "system",
             eventType: "status_transition",
-            metadata: { from: current.status, to: "RETRY_WAIT" },
+            metadata: { from: current.status, to },
           },
         });
         await tx.auditEvent.create({

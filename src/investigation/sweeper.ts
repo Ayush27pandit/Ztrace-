@@ -52,7 +52,7 @@ export async function sweepStaleLeases(prisma: PrismaClient, now: Date = new Dat
             investigationId: inv.id,
             actor: "sweeper",
             eventType: "lease_expired",
-            metadata: { failureCategory: "lease_expired", previousOwner: inv.leaseOwner },
+            metadata: { failureCategory: "lease_expired", previousOwner: current.leaseOwner },
           },
         });
       });

@@ -15,6 +15,19 @@ Production bug tickets usually arrive with a description and screenshots, but no
 5. Every claim must cite a stored evidence item. Weak evidence yields `INSUFFICIENT_EVIDENCE` — never a guessed root cause.
 6. The report is posted back to Jira as a comment (when explicitly enabled; **off by default**).
 
+```mermaid
+flowchart LR
+    Jira[Jira Cloud webhook] --> API[Ztrace API]
+    API --> PG[(PostgreSQL)]
+    API --> Q[BullMQ / Redis]
+    Q --> W[Worker]
+    W --> GH[GitHub monorepo]
+    W --> Obs[Observability]
+    W --> LLM[LLM]
+    W --> PG
+    W --> JiraC[Jira comment]
+```
+
 ## Operating principles
 
 - **Evidence before explanation** — every material claim points to evidence IDs.
@@ -33,6 +46,22 @@ Production bug tickets usually arrive with a description and screenshots, but no
 - **Sandbox** — repository reproduction runs in a dedicated sandbox provider, never on the app host
 
 Deployment target: one small EC2 instance (API + worker as separate Docker Compose services), Caddy for HTTPS, managed Postgres (Neon), managed Redis (Upstash), GHCR, GitHub Actions, Grafana Cloud. See `docs/Ztrace_Infrastructure_Architecture.md`.
+
+```mermaid
+stateDiagram-v2
+    RECEIVED --> QUEUED
+    QUEUED --> RUNNING
+    RUNNING --> COLLECTING_EVIDENCE
+    COLLECTING_EVIDENCE --> ANALYZING
+    ANALYZING --> VALIDATING
+    VALIDATING --> REPORT_READY
+    VALIDATING --> INSUFFICIENT_EVIDENCE
+    REPORT_READY --> PUBLISHED
+    REPORT_READY --> REVIEW_REQUIRED
+    RUNNING --> RETRY_WAIT : lease expired
+    RETRY_WAIT --> QUEUED
+    FAILED --> QUEUED : manual retry
+```
 
 ## Layout
 

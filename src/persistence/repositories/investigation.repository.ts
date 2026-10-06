@@ -9,7 +9,7 @@ export interface CreateInvestigationInput {
 }
 
 export class InvestigationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(readonly prisma: PrismaClient) {}
 
   async createOrGet(input: CreateInvestigationInput): Promise<Investigation> {
     try {

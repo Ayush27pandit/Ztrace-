@@ -34,30 +34,38 @@ Production bug tickets usually arrive with a description and screenshots, but no
 
 Deployment target: one small EC2 instance (API + worker as separate Docker Compose services), Caddy for HTTPS, managed Postgres (Neon), managed Redis (Upstash), GHCR, GitHub Actions, Grafana Cloud. See `docs/Ztrace_Infrastructure_Architecture.md`.
 
+## Layout
+
+- `apps/api` — Express API (webhook intake, health endpoints)
+- `apps/worker` — background worker entrypoint
+- `src/config` — environment validation (`parseEnv`)
+- `src/investigation` — state machine, leases, stale-lease sweeper
+- `src/persistence` — Prisma client singleton and repositories
+- `src/queues` — BullMQ queue definition
+- `prisma` — schema and migrations
+- `tests` — Vitest unit + integration suites (`tests/setup.ts` forces local services)
+
+## Commands
+
+```bash
+npm install            # install deps
+docker compose up -d   # local Postgres 16 + Redis 7
+npx prisma migrate dev # apply migrations
+npm run dev:api        # API with hot reload
+npm run dev:worker     # worker with hot reload
+npm test               # vitest run
+npm run lint           # tsc --noEmit
+```
+
+Full walkthrough: `docs/setup.md`.
+
 ## Docs
 
+- `docs/setup.md` — local setup guide
 - `docs/Ztrace_AI_Coding_Agent_Spec (1).md` — full implementation spec
 - `docs/Ztrace_Infrastructure_Architecture.md` — infrastructure & deployment
 - `docs/superpowers/plans/` — implementation plans
 
-## Develop
-
-```bash
-npm install
-cp .env.example .env   # fill in DATABASE_URL and REDIS_URL
-docker compose up -d postgres redis
-npx prisma migrate dev
-npm run dev:api
-npm run dev:worker
-```
-
-## Verify
-
-```bash
-npm run lint   # tsc --noEmit
-npm test
-```
-
 ## Status
 
-Milestone 0+1 scaffold: repo, config validation, Prisma schema, state machine, investigation repository, queue/worker skeleton, lease sweeper (planned), health endpoints. Jira ingestion lands in Milestone 2. Publication remains disabled.
+Milestone 0+1 scaffold: repo, config validation, Prisma schema, state machine, investigation repository, queue/worker skeleton, lease sweeper, health endpoints. Jira ingestion lands in Milestone 2. Publication remains disabled.
